@@ -14,7 +14,6 @@ import os
 # presentation to demonstrate your approach, results or any experiments you tried.
 # You may use any Python library/framework of your choice.
 
-# setted up credentials as enviromental variables
 server = os.getenv("AS_SERVER")
 username = os.getenv("AS_USERNAME")
 database = os.getenv("AS_DATABASE")
