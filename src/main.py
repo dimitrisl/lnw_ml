@@ -3,19 +3,11 @@ import pandas as pd
 import os
 
 
-def iter_ator(cursor):
-    for row in cursor:
-        player_id = row[0]
-        yield player_id
-
-
 def clean_party(x):
     if "1st" in x.lower():
         x = "1st Party"
     elif "3rd" in x.lower():
         x = "3rd Party"
-    else:
-        x = x
     return x
 
 # Task 1 – Maximising revenue
@@ -54,18 +46,17 @@ for table in table2columns:
     print(f"{table} shape {table2columns[table].shape}")
 
 table2columns["dimGameProvider"]["IsSGDContent"] = table2columns["dimGameProvider"]["IsSGDContent"].apply(clean_party)
-# we probably don't need the unknown element here. Could easily drop this.
 
 cursor.execute("SELECT  distinct Player_DWID FROM FactTablePlayer;")
+lala_sql = """SELECT A.Player_DWID, B.Operator_DWID, B.Game_DWID FROM dimPlayer A
+ INNER JOIN FactTablePlayer B ON A.Player_DWID = B.Player_DWID;"""
 
-
-for player_id in iter_ator(cursor):
-    print(player_id)
-    sql = f"SELECT {table2columns['FactTablePlayer']} FROM FactTablePlayer where Player_DWID={player_id};"
-    cnxn = pymssql.connect(server, username, password, database)
-    chunk = pd.read_sql_query(sql, cnxn)
-    # print(chunk.isna().any().any())
-    print(chunk.shape)
+cnxn = pymssql.connect(server, username, password, database)
+chunk = pd.read_sql_query(lala_sql, cnxn)
+# get users and games on the same table
+#,# chunksize=1000)
+# for i in chunk:
+#     print(i)
 
 # this is gonna need a generator
 # lala = pd.read_sql("SELECT * FROM dimGameProvider;", cnxn)  # this is gonna need a generator
