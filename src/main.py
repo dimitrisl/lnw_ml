@@ -8,6 +8,16 @@ def iter_ator(cursor):
         player_id = row[0]
         yield player_id
 
+
+def clean_party(x):
+    if "1st" in x.lower():
+        x = "1st Party"
+    elif "3rd" in x.lower():
+        x = "3rd Party"
+    else:
+        x = x
+    return x
+
 # Task 1 – Maximising revenue
 # Via the casino powering platform players can play either games developed by other game providers (3rd party games)
 # or games developed by SG Digital studios (1st party games). 1
@@ -30,10 +40,10 @@ cursor = cnxn.cursor()
 
 table2columns = {
     "FactTablePlayer": ",".join(["BeginDate_DWID", "Player_DWID", "Operator_DWID", "Game_DWID", "CountryPlayer", "Turnover", "GGR", "RoundCount"]),
-    "dimOperator": "*",
+    "dimOperator": ",".join(["Operator_DWID", "OperatorName"]),
     "dimGame": ",".join(["GameID", "GameName", "GameProvider_DWID"]),
     "dimPlayer": ",".join(["Player_DWID", "playerid"]),
-    "dimGameProvider": ",".join(["GameProviderID", "'Game Provider Name'", "IsSGDContent"]),
+    "dimGameProvider": ",".join(["GameProviderID", "GameProviderName", "IsSGDContent"]),
 }
 
 for table in table2columns:
@@ -43,9 +53,9 @@ for table in table2columns:
     table2columns[table] = pd.read_sql_query(sql_string, cnxn)
     print(f"{table} shape {table2columns[table].shape}")
 
+table2columns["dimGameProvider"]["IsSGDContent"] = table2columns["dimGameProvider"]["IsSGDContent"].apply(clean_party)
+# we probably don't need the unknown element here. Could easily drop this.
 
-
-input("stop")
 cursor.execute("SELECT  distinct Player_DWID FROM FactTablePlayer;")
 
 
