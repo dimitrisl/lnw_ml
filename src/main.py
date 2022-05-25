@@ -1,9 +1,6 @@
-import collections
-
 import pymssql
 import pandas as pd
 import os
-import torch
 from torch.nn import Embedding
 
 
@@ -62,6 +59,7 @@ sql_string = "select Player_DWID, Game_DWID, count(BeginDate_DWID)  from FactTab
 
 player_likes = pd.read_sql_query(sql_string, cnxn)
 player_likes.to_csv("../data/player_likes.csv")
+total_players = sorted(player_likes.loc[:, "Player_DWID"].unique().tolist())
 print("dumped player_likes")
 del player_likes
 sql_string = "select distinct Player_DWID, Game_DWID from FactTablePlayer GROUP BY Player_DWID, Game_DWID;"
@@ -71,3 +69,6 @@ player_played.columns = ["Player_DWID", "Game_DWID"]
 player_played.to_csv("../data/player_played.csv")
 del player_played
 print("dumped player_played")
+
+# ToDo start up coding the embedding part using the player features and the random initial embedding.
+embs = Embedding(len(total_players), embedding_dim=200)
