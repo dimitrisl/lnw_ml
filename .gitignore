@@ -6,3 +6,4 @@ etc/
 share/
 pyvenv.cfg
 .idea/
+*.csv
