@@ -49,7 +49,7 @@ gameid2party["IsSGDContent"] = gameid2party["IsSGDContent"].apply(clean_party)
 gameid2party.to_csv(f"../data/game2party.csv")
 print("dumped gameid2party")
 del gameid2party
-sql_string = "select Player_DWID, SUM(GGR) as GGR,SUM(Turnover) as Turnover ,SUM(RoundCount) as RoundCount from FactTablePlayer GROUP BY Player_DWID;"
+sql_string = "select Player_DWID, count(CountryPlayer) as CountryPlayer, SUM(GGR) as GGR,SUM(Turnover) as Turnover ,SUM(RoundCount) as RoundCount from FactTablePlayer GROUP BY Player_DWID;"
 
 player_features = pd.read_sql_query(sql_string, cnxn)
 player_features.to_csv("../data/player_features.csv")
