@@ -32,38 +32,42 @@ database = os.getenv("AS_DATABASE")
 password = os.getenv("AS_PASSWORD")
 
 cnxn = pymssql.connect(server, username, password, database)
-cursor = cnxn.cursor()
+# cursor = cnxn.cursor()
 
 table2columns = {
     "FactTablePlayer": ["BeginDate_DWID", "Player_DWID", "Operator_DWID", "Game_DWID", "CountryPlayer", "Turnover", "GGR", "RoundCount"],
     "dimOperator": ["Operator_DWID", "OperatorName"],
-    "dimGame": ["GameID", "GameName", "GameProvider_DWID"],
+    "dimGame": ["Game_DWID", "GameName", "GameProvider_DWID"],
     "dimPlayer": ["Player_DWID", "playerid"],
-    "dimGameProvider": ["GameProviderID", "GameProviderName", "IsSGDContent"],
+    "dimGameProvider": ['GameProvider_DWID', 'GameProviderId', 'GameProviderName', 'IsSGDContent'],
 }
 
-for table in table2columns:
-    print(table)
-    tmp = ",".join(table2columns[table])
-    sql_string = f"SELECT {tmp} from {table}"
-    if table == "FactTablePlayer":
-        dest = f"../data/{table}.csv"
-        pd.DataFrame(columns=table2columns[table]).to_csv(dest)
-        cx = pd.read_sql_query(sql_string, cnxn, chunksize=1000000)
-        for i in cx:
-            i.to_csv(f'../data/{table}.csv', index=False, mode='a', header=False)
-    else:
-        pd.read_sql_query(sql_string, cnxn).to_csv(f"../data/{table}.csv", columns=table2columns[table])
+sql_string = "select distinct  F.Game_DWID,IsSGDContent from factTablePlayer F inner join dimGame G on F.Game_DWID=G.Game_DWID INNER JOIN dimGameProvider P on P.GameProvider_DWID = G.GameProvider_DWID;"
 
-# table2columns["dimGameProvider"]["IsSGDContent"] = table2columns["dimGameProvider"]["IsSGDContent"].apply(clean_party)
-#
-# player_names = table2columns["dimPlayer"].Player_DWID.unique().tolist()
-# player_embeddings = Embedding(num_embeddings=len(player_names), embedding_dim=300)
-#
-# pd.read_sql_query("select Player_DWID, SUM(GGR) as GGR,SUM(Turnover) as Turnover ,SUM(RoundCount) as RoundCount from FactTablePlayer GROUP BY Player_DWID;", cnxn).to_csv("../data/player_infos.csv",
-#                                                                                                                         columns=["Player_DWID","GGR", "Turnover", "RoundCount"])
-# pd.read_sql_query("select Game_DWID, SUM(GGR) as GGR,SUM(Turnover)  as Turnover ,SUM(RoundCount) as RoundCount from FactTablePlayer GROUP BY Game_DWID;", cnxn).to_csv("../data/item_infos.csv",
-#                                                                                                                            columns=["Game_DWID","GGR", "Turnover", "RoundCount"])
-#
-#
-# player_country = pd.read_sql_query("select distinct Player_DWID, CountryPlayer from FactTablePlayer;", cnxn)
+gameid2party = pd.read_sql_query(sql_string, cnxn)
+gameid2party["IsSGDContent"] = gameid2party["IsSGDContent"].apply(clean_party)
+gameid2party.to_csv(f"../data/game2party.csv")
+print("dumped gameid2party")
+del gameid2party
+sql_string = "select Player_DWID, SUM(GGR) as GGR,SUM(Turnover) as Turnover ,SUM(RoundCount) as RoundCount from FactTablePlayer GROUP BY Player_DWID;"
+
+player_features = pd.read_sql_query(sql_string, cnxn)
+player_features.to_csv("../data/player_features.csv")
+print("dumped player_features")
+del player_features
+# i need to release resources
+sql_string = "select Player_DWID, Game_DWID, count(BeginDate_DWID)  from FactTablePlayer GROUP BY Player_DWID, BeginDate_DWID, Game_DWID;"
+# I decide to give a certain priority to the games each player likes on the final result signifying 0 to a game that he has never played before
+# versus a game he has played more than 1 days.
+
+player_likes = pd.read_sql_query(sql_string, cnxn)
+player_likes.to_csv("../data/player_likes.csv")
+print("dumped player_likes")
+del player_likes
+sql_string = "select distinct Player_DWID, Game_DWID from FactTablePlayer GROUP BY Player_DWID, Game_DWID;"
+player_played = pd.read_sql_query(sql_string, cnxn)
+player_played = player_played.groupby("Player_DWID")["Game_DWID"].agg(lambda x: list(x))
+player_played.columns = ["Player_DWID", "Game_DWID"]
+player_played.to_csv("../data/player_played.csv")
+del player_played
+print("dumped player_played")
