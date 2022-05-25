@@ -1,6 +1,10 @@
+import collections
+
 import pymssql
 import pandas as pd
 import os
+import torch
+from torch.nn import Embedding
 
 
 def clean_party(x):
@@ -31,39 +35,35 @@ cnxn = pymssql.connect(server, username, password, database)
 cursor = cnxn.cursor()
 
 table2columns = {
-    "FactTablePlayer": ",".join(["BeginDate_DWID", "Player_DWID", "Operator_DWID", "Game_DWID", "CountryPlayer", "Turnover", "GGR", "RoundCount"]),
-    "dimOperator": ",".join(["Operator_DWID", "OperatorName"]),
-    "dimGame": ",".join(["GameID", "GameName", "GameProvider_DWID"]),
-    "dimPlayer": ",".join(["Player_DWID", "playerid"]),
-    "dimGameProvider": ",".join(["GameProviderID", "GameProviderName", "IsSGDContent"]),
+    "FactTablePlayer": ["BeginDate_DWID", "Player_DWID", "Operator_DWID", "Game_DWID", "CountryPlayer", "Turnover", "GGR", "RoundCount"],
+    "dimOperator": ["Operator_DWID", "OperatorName"],
+    "dimGame": ["GameID", "GameName", "GameProvider_DWID"],
+    "dimPlayer": ["Player_DWID", "playerid"],
+    "dimGameProvider": ["GameProviderID", "GameProviderName", "IsSGDContent"],
 }
 
 for table in table2columns:
+    print(table)
+    tmp = ",".join(table2columns[table])
+    sql_string = f"SELECT {tmp} from {table}"
     if table == "FactTablePlayer":
-        continue
-    sql_string = f"SELECT {table2columns[table]} from {table}"
-    table2columns[table] = pd.read_sql_query(sql_string, cnxn)
-    print(f"{table} shape {table2columns[table].shape}")
+        dest = f"../data/{table}.csv"
+        pd.DataFrame(columns=table2columns[table]).to_csv(dest)
+        cx = pd.read_sql_query(sql_string, cnxn, chunksize=1000000)
+        for i in cx:
+            i.to_csv(f'../data/{table}.csv', index=False, mode='a', header=False)
+    else:
+        pd.read_sql_query(sql_string, cnxn).to_csv(f"../data/{table}.csv", columns=table2columns[table])
 
-table2columns["dimGameProvider"]["IsSGDContent"] = table2columns["dimGameProvider"]["IsSGDContent"].apply(clean_party)
-
-cursor.execute("SELECT  distinct Player_DWID FROM FactTablePlayer;")
-lala_sql = """SELECT A.Player_DWID, B.Operator_DWID, B.Game_DWID FROM dimPlayer A
- INNER JOIN FactTablePlayer B ON A.Player_DWID = B.Player_DWID;"""
-
-cnxn = pymssql.connect(server, username, password, database)
-chunk = pd.read_sql_query(lala_sql, cnxn)
-# get users and games on the same table
-#,# chunksize=1000)
-# for i in chunk:
-#     print(i)
-
-# this is gonna need a generator
-# lala = pd.read_sql("SELECT * FROM dimGameProvider;", cnxn)  # this is gonna need a generator
-# cursor.execute("SELECT * FROM FactTablePlayer;")
-# for row in cursor:
-#     print(row)
-    # input("stop")
-# cnxn.commit()
-# cnxn.close()
-
+# table2columns["dimGameProvider"]["IsSGDContent"] = table2columns["dimGameProvider"]["IsSGDContent"].apply(clean_party)
+#
+# player_names = table2columns["dimPlayer"].Player_DWID.unique().tolist()
+# player_embeddings = Embedding(num_embeddings=len(player_names), embedding_dim=300)
+#
+# pd.read_sql_query("select Player_DWID, SUM(GGR) as GGR,SUM(Turnover) as Turnover ,SUM(RoundCount) as RoundCount from FactTablePlayer GROUP BY Player_DWID;", cnxn).to_csv("../data/player_infos.csv",
+#                                                                                                                         columns=["Player_DWID","GGR", "Turnover", "RoundCount"])
+# pd.read_sql_query("select Game_DWID, SUM(GGR) as GGR,SUM(Turnover)  as Turnover ,SUM(RoundCount) as RoundCount from FactTablePlayer GROUP BY Game_DWID;", cnxn).to_csv("../data/item_infos.csv",
+#                                                                                                                            columns=["Game_DWID","GGR", "Turnover", "RoundCount"])
+#
+#
+# player_country = pd.read_sql_query("select distinct Player_DWID, CountryPlayer from FactTablePlayer;", cnxn)
