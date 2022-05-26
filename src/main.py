@@ -69,6 +69,3 @@ player_played.columns = ["Player_DWID", "Game_DWID"]
 player_played.to_csv("../data/player_played.csv")
 del player_played
 print("dumped player_played")
-
-# ToDo start up coding the embedding part using the player features and the random initial embedding.
-embs = Embedding(len(total_players), embedding_dim=200)
