@@ -4,7 +4,8 @@ import pandas as pd
 from torch.nn import Embedding
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-from sklearn.metrics import mean_absolute_error
+from tqdm import tqdm
+import pickle
 import numpy as np
 torch.manual_seed(1)
 
@@ -19,7 +20,7 @@ def train_epoch(_epoch, dataloader, model, loss_function, optimizer, ev_tr):
         raise ValueError("NOT valid mode")
     loss_score = []
 
-    for sample_batched in dataloader:
+    for sample_batched in tqdm(dataloader):
         # get the inputs (batch)
         inputs, labels = sample_batched
 
@@ -89,9 +90,9 @@ class EmdeddingTrainer(nn.Module):
         return out
 
 
-BATCH = 10000
-EPOCHS = 5
-lr = 0.001
+BATCH = 1000000
+EPOCHS = 1
+lr = 0.01
 
 X_path = "../data/player_features.csv"
 
@@ -112,3 +113,6 @@ for i in range(EPOCHS):
     train_loss = train_epoch(i, train_loader, model, criterion, optimizer, "train")
     train_losses.append(train_loss)
     print(f"train loss {train_loss}")
+
+with open("../data/player_embeddings.pickle", "wb") as f:
+    pickle.dump(model.embs.weight, f)
