@@ -90,7 +90,7 @@ class EmdeddingTrainer(nn.Module):
         return out
 
 
-BATCH = 1000000
+BATCH = 1000
 EPOCHS = 1
 lr = 0.01
 
@@ -100,7 +100,7 @@ model = EmdeddingTrainer(pd.read_csv(X_path).shape[0])
 criterion = torch.nn.L1Loss()
 
 train_dataset = SampleDataset(X_path)
-train_loader = DataLoader(train_dataset, batch_size=BATCH, shuffle=True, num_workers=4)
+train_loader = DataLoader(train_dataset, batch_size=BATCH, shuffle=False, num_workers=4)
 parameters = filter(lambda p: p.requires_grad, model.parameters())
 
 optimizer = torch.optim.Adam(parameters, lr=lr)
