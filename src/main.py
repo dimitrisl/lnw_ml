@@ -39,7 +39,7 @@ table2columns = {
     "dimGameProvider": ['GameProvider_DWID', 'GameProviderId', 'GameProviderName', 'IsSGDContent'],
 }
 
-sql_string = "select distinct  F.Game_DWID,IsSGDContent from factTablePlayer F inner join dimGame G on F.Game_DWID=G.Game_DWID INNER JOIN dimGameProvider P on P.GameProvider_DWID = G.GameProvider_DWID;"
+sql_string = "select distinct  F.Player_DWID,F.Game_DWID,IsSGDContent from factTablePlayer F inner join dimGame G on F.Game_DWID=G.Game_DWID INNER JOIN dimGameProvider P on P.GameProvider_DWID = G.GameProvider_DWID where IsSGDContent like '%1st%';"
 
 gameid2party = pd.read_sql_query(sql_string, cnxn)
 gameid2party["IsSGDContent"] = gameid2party["IsSGDContent"].apply(clean_party)
