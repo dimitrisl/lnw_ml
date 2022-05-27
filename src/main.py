@@ -66,12 +66,13 @@ player_features.to_csv("../data/player_features.csv")
 print("dumped player_features")
 del player_features
 # i need to release resources
-sql_string = "select Player_DWID, Game_DWID, count(BeginDate_DWID)  from FactTablePlayer GROUP BY Player_DWID, BeginDate_DWID, Game_DWID;"
+sql_string = "select Player_DWID, Game_DWID, count(BeginDate_DWID) as play_times  from FactTablePlayer GROUP BY Player_DWID, BeginDate_DWID, Game_DWID;"
 # I decide to give a certain priority to the games each player likes on the final result signifying 0 to a game that he has never played before
 # versus a game he has played more than 1 days.
 
 player_likes = pd.read_sql_query(sql_string, cnxn)
-player_likes["isgd"] = player_likes.apply(lambda x: add_sgd(x,tmp), axis=1)
+player_likes["isgd"] = player_likes.apply(lambda x: add_sgd(x, tmp), axis=1)
+del player_likes["isgd"]
 player_likes = player_likes.dropna()
 player_likes.to_csv("../data/player_likes.csv")
 total_players = sorted(player_likes.loc[:, "Player_DWID"].unique().tolist())
