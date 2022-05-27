@@ -104,32 +104,33 @@ class EmdeddingTrainer(nn.Module):
         return out
 
 
-BATCH = 10000
-EPOCHS = 1
-lr = 0.01
+def dnn_main():
+    BATCH = 10000
+    EPOCHS = 1
+    lr = 0.01
 
-X_path = "../data/player_features.csv"
+    X_path = "../data/player_features.csv"
 
-model = EmdeddingTrainer(pd.read_csv(X_path).shape[0])
-criterion = torch.nn.L1Loss()
+    model = EmdeddingTrainer(pd.read_csv(X_path).shape[0])
+    criterion = torch.nn.L1Loss()
 
-train_dataset = SampleDataset(X_path)
-train_loader = DataLoader(train_dataset, batch_size=BATCH, shuffle=False, num_workers=4)
-parameters = filter(lambda p: p.requires_grad, model.parameters())
+    train_dataset = SampleDataset(X_path)
+    train_loader = DataLoader(train_dataset, batch_size=BATCH, shuffle=False, num_workers=4)
+    parameters = filter(lambda p: p.requires_grad, model.parameters())
 
-optimizer = torch.optim.Adam(parameters, lr=lr)
+    optimizer = torch.optim.Adam(parameters, lr=lr)
 
-train_losses = []
+    train_losses = []
 
 
-for i in range(EPOCHS):
-    print(f"epoch {i}")
-    train_loss = train_epoch(i, train_loader, model, criterion, optimizer, "train")
-    train_losses.append(train_loss)
-    print(f"train loss {train_loss}")
+    for i in range(EPOCHS):
+        print(f"epoch {i}")
+        train_loss = train_epoch(i, train_loader, model, criterion, optimizer, "train")
+        train_losses.append(train_loss)
+        print(f"train loss {train_loss}")
 
-with open("../data/player_embeddings.pickle", "wb") as f:
-    tmp = pd.DataFrame(model.embs.weight.detach())
-    players = pd.read_csv(X_path)["Player_DWID"]
-    tmp.index = players
-    pickle.dump(tmp, f)
+    with open("../data/player_embeddings.pickle", "wb") as f:
+        tmp = pd.DataFrame(model.embs.weight.detach())
+        players = pd.read_csv(X_path)["Player_DWID"]
+        tmp.index = players
+        pickle.dump(tmp, f)
