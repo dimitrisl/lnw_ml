@@ -40,28 +40,42 @@ def train_epoch(_epoch, dataloader, model, loss_function, optimizer, ev_tr):
     return np.average(loss_score)
 
 
+# class SampleDataset(Dataset):
+#  # in the case that i couldn't fit everything on memory i would use this code.
+#     def __init__(self, path):
+#         self.features = ['CountryPlayer', 'RoundCount', 'Turnover']
+#         self.labels = ['GGR']
+#         self.path = path
+#
+#     def __getitem__(self, id):
+#         chunk = pd.read_csv(self.path, chunksize=100000)
+#         ft = ""
+#         lb = ""
+#         for temp in chunk:
+#             res = temp.loc[temp.index.isin([id]), :]
+#             if res.shape[0]:
+#                 ft = res.loc[:, self.features]
+#                 lb = res.loc[:, self.labels]
+#                 ft, lb = (res.index[0], torch.FloatTensor(ft.values)), torch.FloatTensor(lb.values)
+#                 break
+#         return ft, lb
+#
+#     def __len__(self):
+#         return pd.read_csv(self.path).shape[0]
+
 class SampleDataset(Dataset):
 
     def __init__(self, path):
-        self.features = ['CountryPlayer', 'RoundCount', 'Turnover']
-        self.labels = ['GGR']
-        self.path = path
+            self.features = ['CountryPlayer', 'RoundCount', 'Turnover']
+            self.labels = ['GGR']
+            self.data = pd.read_csv(path)
 
-    def __getitem__(self, id):
-        chunk = pd.read_csv(self.path, chunksize=100000)
-        ft = ""
-        lb = ""
-        for temp in chunk:
-            res = temp.loc[temp.index.isin([id]), :]
-            if res.shape[0]:
-                ft = res.loc[:, self.features]
-                lb = res.loc[:, self.labels]
-                ft, lb = (res.index[0], torch.FloatTensor(ft.values)), torch.FloatTensor(lb.values)
-                break
-        return ft, lb
+    def __getitem__(self, item):
+        ft, lb = self.data.loc[item, self.features], self.data.loc[item, self.labels]
+        return (item, torch.FloatTensor(ft)), torch.FloatTensor(lb)
 
     def __len__(self):
-        return pd.read_csv(self.path).shape[0]
+        return self.data.shape[0]
 
 
 class EmdeddingTrainer(nn.Module):
@@ -82,7 +96,7 @@ class EmdeddingTrainer(nn.Module):
     def forward(self, x):
         idx, x = x
         retrieved_emb = self.retrieve_embedding(idx)
-        x = torch.cat([retrieved_emb.unsqueeze(1), x], axis=2)
+        x = torch.cat([retrieved_emb.unsqueeze(1), x.unsqueeze(1)], axis=2)
         inputs = [torch.relu(conv(x)) for conv in self.convs]  # [(N,Co,W), ...]*len(Ks)
         inputs = [torch.max_pool1d(i, i.size(2)).squeeze(2) for i in inputs]  # [(N,Co), ...]*len(Ks)
         concated = torch.cat(inputs, 1)
@@ -90,7 +104,7 @@ class EmdeddingTrainer(nn.Module):
         return out
 
 
-BATCH = 1000
+BATCH = 10000
 EPOCHS = 1
 lr = 0.01
 
@@ -115,4 +129,7 @@ for i in range(EPOCHS):
     print(f"train loss {train_loss}")
 
 with open("../data/player_embeddings.pickle", "wb") as f:
-    pickle.dump(model.embs.weight, f)
+    tmp = pd.DataFrame(model.embs.weight.detach())
+    players = pd.read_csv(X_path)["Player_DWID"]
+    tmp.index = players
+    pickle.dump(tmp, f)

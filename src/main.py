@@ -1,3 +1,4 @@
+import numpy as np
 import pymssql
 import pandas as pd
 import os
@@ -10,6 +11,13 @@ def clean_party(x):
     elif "3rd" in x.lower():
         x = "3rd Party"
     return x
+
+
+def add_sgd(x, tmp):
+    res = np.nan
+    if x["Game_DWID"] in tmp:
+        res = 1
+    return res
 
 # Task 1 – Maximising revenue
 # Via the casino powering platform players can play either games developed by other game providers (3rd party games)
@@ -45,8 +53,13 @@ gameid2party = pd.read_sql_query(sql_string, cnxn)
 gameid2party["IsSGDContent"] = gameid2party["IsSGDContent"].apply(clean_party)
 gameid2party.to_csv(f"../data/game2party.csv")
 print("dumped gameid2party")
-del gameid2party
 sql_string = "select Player_DWID, count(CountryPlayer) as CountryPlayer, SUM(GGR) as GGR,SUM(Turnover) as Turnover ,SUM(RoundCount) as RoundCount from FactTablePlayer GROUP BY Player_DWID;"
+
+tmp = gameid2party.loc[:, ["Game_DWID", "IsSGDContent"]].drop_duplicates()
+tmp.index = tmp.loc[:, "Game_DWID"]
+tmp = tmp.loc[:, ["IsSGDContent"]]
+tmp = tmp.to_dict()["IsSGDContent"]
+del gameid2party
 
 player_features = pd.read_sql_query(sql_string, cnxn)
 player_features.to_csv("../data/player_features.csv")
@@ -58,12 +71,17 @@ sql_string = "select Player_DWID, Game_DWID, count(BeginDate_DWID)  from FactTab
 # versus a game he has played more than 1 days.
 
 player_likes = pd.read_sql_query(sql_string, cnxn)
+player_likes["isgd"] = player_likes.apply(lambda x: add_sgd(x,tmp), axis=1)
+player_likes = player_likes.dropna()
 player_likes.to_csv("../data/player_likes.csv")
 total_players = sorted(player_likes.loc[:, "Player_DWID"].unique().tolist())
 print("dumped player_likes")
 del player_likes
 sql_string = "select distinct Player_DWID, Game_DWID from FactTablePlayer GROUP BY Player_DWID, Game_DWID;"
 player_played = pd.read_sql_query(sql_string, cnxn)
+player_played["isgd"] = player_played.apply(lambda x: add_sgd(x, tmp), axis=1)
+player_played = player_played.dropna()
+# we don't care to keep here the games that are not 1st party
 player_played = player_played.groupby("Player_DWID")["Game_DWID"].agg(lambda x: list(x))
 player_played.columns = ["Player_DWID", "Game_DWID"]
 player_played.to_csv("../data/player_played.csv")
